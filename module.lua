@@ -24,10 +24,17 @@ function openHelpPopup(playerName)
 <p align='center'><font size='20' color='#BABD2F'><b>Aim Trainer</b></font></p>
 <b>Welcome to the module!</b>
 
-...
+This module will put your mouse aiming ability to a test.
+
+By clicking the <b>Start</b> button, the minigame will start.
+
+You will have <b>3</b> squares on the screen in random positions.
+By clicking on one, its position will change.
+
+The goal is to click as many of these squares as you can in <font color="#2EBA7E"><b>30</b> seconds</font>.
 
 <p align='right'><font color='#606090' size='10'><b><i>Made by Khajiitos#0000</i><b></font></p>]]
-    ui.addPopup(1, 0, text, playerName, 200, 50, 400, true)
+    ui.addPopup(1, 0, text, playerName, 200, 75, 400, true)
 end
 
 AimTrainerGame = {
@@ -55,8 +62,8 @@ function AimTrainerGame:new(player)
     local o = {}
     setmetatable(o, self)
     self.__index = self
-    self.player = player
-    self.squares = {}
+    o.player = player
+    o.squares = {}
     return o
 end
 
@@ -95,7 +102,7 @@ end
 function AimTrainerGame:onClickSquare(squareNumber)
     self.score = self.score + 1
     self:updateScoreAndTime()
-    ui.removeTextArea(self.squares[squareNumber].textAreaID, playerName)
+    ui.removeTextArea(self.squares[squareNumber].textAreaID, self.player)
 
     local squareX, squareY = generateSquarePosition()
 
@@ -129,7 +136,9 @@ end
 
 function eventColorPicked(colorPickerId, playerName, color)
     if colorPickerId == 1 then
-        updateSquareColor(playerName, color)
+        if color ~= -1 then
+            updateSquareColor(playerName, color)
+        end
     end
 end
 
@@ -145,6 +154,12 @@ function eventLoop(currentTime, timeRemaining)
     end
     for i, playerToRemove in pairs(toRemove) do
         playerGame[playerToRemove] = nil
+    end
+end
+
+function eventChatCommand(playerName, message)
+    if message == "help" then
+        openHelpPopup(playerGame)
     end
 end
 
@@ -174,6 +189,12 @@ function eventPlayerDied(playerName)
     tfm.exec.respawnPlayer(playerName)
 end
 
+function eventPlayerLeft(playerName)
+    if playerGame[playerName] then
+        playerGame[playerName] = nil
+    end
+end
+
 for playerName in pairs(tfm.get.room.playerList) do
     initPlayer(playerName)
 end
@@ -186,3 +207,5 @@ tfm.exec.disableAutoTimeLeft(true)
 tfm.exec.disablePhysicalConsumables(true)
 tfm.exec.newGame(0, true)
 tfm.exec.setGameTime(0, true)
+
+system.disableChatCommandDisplay("help", true)
