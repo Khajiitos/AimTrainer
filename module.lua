@@ -81,6 +81,7 @@ end
 
 function AimTrainerGame:start()
     tfm.exec.freezePlayer(self.player, true)
+    tfm.exec.setNameColor(self.player, playerData[self.player].squareColor)
     ui.addTextArea(3, "", self.player, 5, 5, 790, 390, nil, nil, 1.0, true)
 
     for i = 6, 8 do
@@ -100,6 +101,7 @@ end
 
 function AimTrainerGame:finish()
     tfm.exec.freezePlayer(self.player, false)
+    tfm.exec.setNameColor(self.player, 0xFFFFFF)
     for i = 3, 8 do
         ui.removeTextArea(i, self.player)
     end
@@ -193,6 +195,15 @@ function eventChatCommand(playerName, message)
     end
 end
 
+function invertColor(color)
+    local strColor = string.format("%06X", color)
+    local r = tonumber(string.sub(strColor, 1, 2), 16)
+    local g = tonumber(string.sub(strColor, 3, 4), 16)
+    local b = tonumber(string.sub(strColor, 5, 6), 16)
+    local invertedStrColor = string.format("%02X", 255 - r) .. string.format("%02X", 255 - g) .. string.format("%02X", 255 - b)
+    return tonumber(invertedStrColor, 16)
+end
+
 function updateSquareColor(playerName, color)
     if color == 0xFFFFFF then
         color = 0xFEFEFE
@@ -200,7 +211,7 @@ function updateSquareColor(playerName, color)
         color = 0x010101
     end
     playerData[playerName].squareColor = color
-    ui.addTextArea(9, "<a href='event:squareColor'><p align='center'><font size='13'><b>Square color</b></font></p></a>", playerName, 10, 35, 120, 20, color, color, 1.0, true)
+    ui.addTextArea(9, string.format("<a href='event:squareColor'><p align='center'><font size='13' color='#%06X'><b>Square color</b></font></p></a>", invertColor(color)), playerName, 10, 35, 120, 20, color, color, 1.0, true)
 end
 
 function initPlayer(playerName)
@@ -210,6 +221,7 @@ function initPlayer(playerName)
     ui.addTextArea(2, "<a href='event:start'><p align='center'><font size='16'><b>Start</b></font></p></a>", playerName, 350, 360, 100, 25, nil, nil, 1.0, true)
     updateSquareColor(playerName, 0xFF0000)
     tfm.exec.respawnPlayer(playerName)
+    tfm.exec.setNameColor(playerName, 0xFFFFFF)
 end
 
 function eventNewPlayer(playerName)
