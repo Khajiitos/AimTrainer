@@ -44,8 +44,13 @@ AimTrainerGame = {
     timeLeft = 30
 }
 
-playerGame = {}
-playerSquareColor = {}
+PlayerData = {
+    game = nil,
+    squareColor = 0xFF0000,
+    bestScore = 0
+}
+
+playerData = {}
 
 function generateSquarePosition()
     local x = math.random(5, 765)
@@ -56,6 +61,13 @@ function generateSquarePosition()
         y = math.random(30, 365)
     end
     return x, y
+end
+
+function PlayerData:new()
+    local o = {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
 end
 
 function AimTrainerGame:new(player)
@@ -79,7 +91,7 @@ function AimTrainerGame:start()
             textAreaID = i,
             squareNum = #self.squares + 1
         }
-        ui.addTextArea(i, string.format('<a href="event:square%d"><font size="128">a</font></a>', #self.squares), self.player, squareX, squareY, 25, 25, playerSquareColor[self.player], 0x324650, 1.0, true)
+        ui.addTextArea(i, string.format('<a href="event:square%d"><font size="128">a</font></a>', #self.squares), self.player, squareX, squareY, 25, 25, playerData[self.player].squareColor, 0x324650, 1.0, true)
     end
     ui.addTextArea(4, "", self.player, 5, 30, 0, 25, nil, nil, 9.0, true)
     ui.addTextArea(5, "", self.player, 5, 55, 0, 25, nil, nil, 9.0, true)
@@ -92,6 +104,10 @@ function AimTrainerGame:finish()
         ui.removeTextArea(i, self.player)
     end
     ui.addPopup(2, 0, string.format('<p align="center"><font size="18" color="#00FF00"><b>GG!</b></font></p>\nYour score: <b>%d</b>', self.score), self.player, 300, 150, 200, true)
+    if self.score > playerData[self.player].bestScore then
+        playerData[self.player].bestScore = self.score
+        tfm.exec.setPlayerScore(self.player, self.score, false)
+    end
 end
 
 function AimTrainerGame:updateScoreAndTime()
@@ -109,24 +125,24 @@ function AimTrainerGame:onClickSquare(squareNumber)
     self.squares[squareNumber].x = squareX
     self.squares[squareNumber].y = squareY
 
-    ui.addTextArea(self.squares[squareNumber].textAreaID, string.format('<a href="event:square%d"><font size="128">a</font></a>', self.squares[squareNumber].squareNum), self.player, squareX, squareY, 25, 25, playerSquareColor[self.player], 0x324650, 1.0, true)
+    ui.addTextArea(self.squares[squareNumber].textAreaID, string.format('<a href="event:square%d"><font size="128">a</font></a>', self.squares[squareNumber].squareNum), self.player, squareX, squareY, 25, 25, playerData[self.player].squareColor, 0x324650, 1.0, true)
 end
 
 function eventTextAreaCallback(textAreaID, playerName, callback)
     if callback == "helpQuestionMark" then
         openHelpPopup(playerName)
     elseif callback == "start" then
-        if not playerGame[playerName] then
+        if not playerData[playerName].game then
             local game = AimTrainerGame:new(playerName)
-            playerGame[playerName] = game
+            playerData[playerName].game = game
             game:start()
         end
     elseif callback == "squareColor" then
-        ui.showColorPicker(1, playerName, playerSquareColor[playerName], "Square color")
+        ui.showColorPicker(1, playerName, playerData[playerName].squareColor, "Square color")
     end
 
     for squareNum in callback:gmatch('square(%d)') do
-        local game = playerGame[playerName]
+        local game = playerData[playerName].game
         if game then
             game:onClickSquare(tonumber(squareNum))
             break
@@ -144,16 +160,19 @@ end
 
 function eventLoop(currentTime, timeRemaining)
     local toRemove = {}
-    for player, game in pairs(playerGame) do
-        game.timeLeft = game.timeLeft - 0.5
-        game:updateScoreAndTime()
-        if game.timeLeft <= 0 then
-            game:finish()
-            toRemove[#toRemove + 1] = player
+    for player, playerData in pairs(playerData) do
+        local game = playerData.game
+        if game then
+            game.timeLeft = game.timeLeft - 0.5
+            game:updateScoreAndTime()
+            if game.timeLeft <= 0 then
+                game:finish()
+                toRemove[#toRemove + 1] = player
+            end
         end
     end
     for i, playerToRemove in pairs(toRemove) do
-        playerGame[playerToRemove] = nil
+        playerData[playerToRemove].game = nil
     end
 end
 
@@ -167,9 +186,9 @@ function eventChatCommand(playerName, message)
     if command == "help" then
         openHelpPopup(playerName)
     elseif command == "exit" then
-        if playerGame[playerName] then
-            playerGame[playerName]:finish()
-            playerGame[playerName] = nil
+        if playerData[playerName].game then
+            playerData[playerName].game:finish()
+            playerData[playerName].game = nil
         end
     end
 end
@@ -180,11 +199,12 @@ function updateSquareColor(playerName, color)
     elseif color == 0x000000 then
         color = 0x010101
     end
-    playerSquareColor[playerName] = color
+    playerData[playerName].squareColor = color
     ui.addTextArea(9, "<a href='event:squareColor'><p align='center'><font size='13'><b>Square color</b></font></p></a>", playerName, 10, 35, 120, 20, color, color, 1.0, true)
 end
 
 function initPlayer(playerName)
+    playerData[playerName] = PlayerData:new()
     system.bindMouse(playerName, true)
     ui.addTextArea(1, "<a href='event:helpQuestionMark'><p align='center'><font size='16'><b>?</b></font></p></a>", playerName, 760, 35, 25, 25, 0x111111, 0x111111, 1.0, true)
     ui.addTextArea(2, "<a href='event:start'><p align='center'><font size='16'><b>Start</b></font></p></a>", playerName, 350, 360, 100, 25, nil, nil, 1.0, true)
@@ -201,8 +221,8 @@ function eventPlayerDied(playerName)
 end
 
 function eventPlayerLeft(playerName)
-    if playerGame[playerName] then
-        playerGame[playerName] = nil
+    if playerData[playerName].game then
+        playerData[playerName].game = nil
     end
 end
 
