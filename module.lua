@@ -149,6 +149,11 @@ function eventLoop(currentTime, timeRemaining)
 end
 
 function updateSquareColor(playerName, color)
+    if color == 0xFFFFFF then
+        color = 0xFEFEFE
+    elseif color == 0x000000 then
+        color = 0x010101
+    end
     playerSquareColor[playerName] = color
     ui.addTextArea(9, "<a href='event:squareColor'><p align='center'><font size='13'><b>Square color</b></font></p></a>", playerName, 10, 35, 120, 20, color, color, 1.0, true)
 end
