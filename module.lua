@@ -158,8 +158,19 @@ function eventLoop(currentTime, timeRemaining)
 end
 
 function eventChatCommand(playerName, message)
-    if message == "help" then
-        openHelpPopup(playerGame)
+    local args = {}
+    for arg in message:gmatch("%S+") do
+        args[#args + 1] = arg
+    end
+    local command = table.remove(args, 1)
+
+    if command == "help" then
+        openHelpPopup(playerName)
+    elseif command == "exit" then
+        if playerGame[playerName] then
+            playerGame[playerName]:finish()
+            playerGame[playerName] = nil
+        end
     end
 end
 
@@ -209,3 +220,4 @@ tfm.exec.newGame(0, true)
 tfm.exec.setGameTime(0, true)
 
 system.disableChatCommandDisplay("help", true)
+system.disableChatCommandDisplay("exit", true)
